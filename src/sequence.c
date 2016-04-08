@@ -251,6 +251,17 @@ int seq_init(seq_t *S, const char *seq, const char *name) {
 		return 3;
 	}
 
+	// andi is optimised for long sequences. Set a flag here, so we can issue
+	// a warning later.
+	if (S->len < 1000) {
+		FLAGS |= F_SHORT;
+	}
+
+	if (S->len == 0) {
+		warnx("The sequence %s is empty.", S->name);
+		return 4;
+	}
+
 	return 0;
 }
 

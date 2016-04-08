@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 
 				if (threads > (long unsigned int)omp_get_num_procs()) {
 					warnx(
-						"The number of threads to be used, is greater then the "
+						"The number of threads to be used, is greater than the "
 						"number of available processors; Ignoring -t %lu "
 						"argument.",
 						threads);
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 				} else if (strcasecmp(optarg, "KIMURA") == 0) {
 					MODEL = M_KIMURA;
 				} else {
-					warnx("Ignoring argument for --model. Expected Raw JC or "
+					warnx("Ignoring argument for --model. Expected Raw, JC or "
 						  "Kimura");
 				}
 				break;
@@ -224,6 +224,13 @@ int main(int argc, char *argv[]) {
 
 	size_t n = dsa_size(&dsa);
 
+	if (n < 2) {
+		errx(1,
+			 "I am truly sorry, but with less than two sequences (%zu given) "
+			 "there is nothing to compare.",
+			 n);
+	}
+
 	if (FLAGS & F_VERBOSE) {
 		fprintf(stderr, "Comparing %zu sequences\n", n);
 		fflush(stderr);
@@ -237,15 +244,22 @@ int main(int argc, char *argv[]) {
 	// seed the random number generator with the current time
 	gsl_rng_set(RNG, time(NULL));
 
-	seq_t *sequences = dsa_data(&dsa);
-	// compute distance matrix
-	if (n >= 2) {
-		calculate_distances(sequences, n);
-	} else {
-		warnx("I am truly sorry, but with less than two sequences (%zu given) "
-			  "there is nothing to compare.",
-			  n);
+
+	// The sequence length is validated in seq_init.
+	if (FLAGS & F_SHORT) {
+		warnx("One of the given input sequences is shorter than a thousand "
+			  "nucleotides. This may result in inaccurate distances. Try an "
+			  "alignment instead.");
 	}
+
+	// Warn about non ACGT residues.
+	if (FLAGS & F_NON_ACGT) {
+		warnx("The input sequences contained characters other than acgtACGT. "
+			  "These were automatically stripped to ensure correct results.");
+	}
+
+	// compute distance matrix
+	calculate_distances(dsa_data(&dsa), n);
 
 	dsa_free(&dsa);
 	gsl_rng_free(RNG);
@@ -303,7 +317,7 @@ void version(void) {
 		"Sequence Analysis, Genome Rearrangements, and Phylogenetic "
 		"Reconstruction. pp 118f.\n"
 		"3) SA construction: Mori, Y. (2005). Short description of improved "
-		"two-stage suffix sorting alorithm. "
+		"two-stage suffix sorting algorithm. "
 		"http://homepage3.nifty.com/wpage/software/itssort.txt\n"};
 	printf("%s", str);
 	exit(EXIT_SUCCESS);

@@ -4,11 +4,12 @@
  * @file
  * @brief This file contains various distance methods.
  */
-#include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "esa.h"
 #include "global.h"
 #include "io.h"
@@ -16,7 +17,6 @@
 #include "process.h"
 #include "sequence.h"
 
-#include <time.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
@@ -304,33 +304,17 @@ model dist_anchor(const esa_s *C, const char *query, size_t query_length,
  * @param sequences - An array of pointers to the sequences.
  * @param n - The number of sequences.
  */
-void calculate_distances(seq_t *sequences, int n) {
-	int i;
+void calculate_distances(seq_t *sequences, size_t n) {
+	struct model *M = NULL;
 
-	// check the sequences
-	for (i = 0; i < n; i++) {
-		if (sequences[i].S == NULL || sequences[i].len == 0) {
-			errx(1, "Missing sequence: %s", sequences[i].name);
-		}
-
-		if (sequences[i].len < 1000) {
-			FLAGS |= F_SHORT;
-		}
+	// The maximum number of sequences is near 457'845'052.
+	size_t intermediate = SIZE_MAX / sizeof(*M) / n;
+	if (intermediate < n) {
+		size_t root = (size_t)sqrt(SIZE_MAX / sizeof(*M));
+		err(1, "Comparison is limited to %zu sequences (%zu given).", root, n);
 	}
 
-	if (FLAGS & F_SHORT) {
-		warnx("One of the given input sequences is shorter than a thousand "
-			  "nucleotides. This may result in inaccurate distances. Try an "
-			  "alignment instead.");
-	}
-
-	// Warn about non ACGT residues.
-	if (FLAGS & F_NON_ACGT) {
-		warnx("The input sequences contained characters other than acgtACGT. "
-			  "These were automatically stripped to ensure correct results.");
-	}
-
-	model *M = malloc(n * n * sizeof(*M));
+	M = malloc(n * n * sizeof(*M));
 	if (!M) {
 		err(errno, "Could not allocate enough memory for the comparison "
 				   "matrix. Try using --join or --low-memory.");
